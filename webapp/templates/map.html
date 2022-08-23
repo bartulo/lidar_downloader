@@ -1,0 +1,20 @@
+{% load leaflet_tags %}
+{% load static %}
+
+<!DOCTYPE html>
+  <head>
+    {% load bootstrap5 %}
+
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
+    {% leaflet_js plugins="ALL" %}
+    {% leaflet_css plugins="ALL" %}
+    <link rel="stylesheet" type="text/css" href="{% static 'webapp/css/base.css' %}">
+  </head>
+  <body>
+
+    <div id="map"></div>
+    {% include 'partials/modal.html' %}
+     <script src="{% static 'webapp/javascript/main.js' %}"></script> 
+  </body>
+</html>

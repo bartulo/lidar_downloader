@@ -1,0 +1,18 @@
+.leaflet-container {
+  height: 800px;
+  overflow: hidden;
+}
+
+.hidden {
+  display: None
+}
+
+.modal-backdrop.show {
+  opacity: 0.1;
+}
+
+.modal {
+  width: 300px;
+  left: unset;
+  right: 30px;
+}
