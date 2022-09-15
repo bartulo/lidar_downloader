@@ -4,6 +4,8 @@ from channels.generic.websocket import WebsocketConsumer
 from django.contrib.gis.geos import Polygon
 from .models import Lida2
 from webapp import mapas
+from os.path import exists
+from os import path
 
 class AppConsumer(WebsocketConsumer):
     def connect(self):
@@ -13,6 +15,10 @@ class AppConsumer(WebsocketConsumer):
             'type':'conexion_establecida',
             'message': 'conectado'
             }))
+
+
+    def checkDownloaded(self, nombre):
+        return exists(path.join('las', nombre))
 
     def receive(self, text_data):
         if json.loads(text_data)['type'] == 'coords':
@@ -36,6 +42,8 @@ class AppConsumer(WebsocketConsumer):
                     'anho': i['anho'],
                     'lat': i['lat'],
                     'long': i['long'],
+                    'tam': i['tam'],
+                    'descargado': self.checkDownloaded(i['nombre']),
                     'coords': list(map(lambda x: [x[1], x[0]], coords))
                     })
             self.send(text_data = json.dumps({
@@ -46,14 +54,30 @@ class AppConsumer(WebsocketConsumer):
 
         elif json.loads(text_data)['type'] == 'download':
             products = json.loads(text_data)['products']
+            print(len(products))
             url = 'https://centrodedescargas.cnig.es/CentroDescargas/descargaDir'
 
-            for product in products:
-                print(product['nombre'])
-                r = requests.post( url, data={'secuencialDescDir': product['id']} )
+            for n, product in enumerate(products):
+                print(product)
+                numFiles = sum(x.get('descargado') == False for x in products)
+                if product['descargado'] is False:
+                    with requests.post( url, data={'secuencialDescDir': product['id']}, stream=True ) as r:
+            
+                        with open(path.join('las', product['nombre']), 'wb') as f:
+                            for i, chunk in enumerate(r.iter_content(chunk_size=1024)):
+                                f.write(chunk)
+                                self.send( text_data = json.dumps({
+                                    'type': 'chunk',
+                                    'tam': product['tam'],
+                                    'chunk': i,
+                                    'numFiles': numFiles
+                                    }))
 
-                with open(product['nombre'], 'wb') as f:
-                    f.write(r.content)
+                    self.send( text_data = json.dumps({
+                        'type': 'file_downloaded',
+                        'file_number': n + 1,
+                        'total_files': numFiles
+                        }))
 
             self.send( text_data = json.dumps({
                 'type': 'downloaded',
@@ -63,10 +87,7 @@ class AppConsumer(WebsocketConsumer):
         elif json.loads(text_data)['type'] == 'fuelmap':
             products = json.loads(text_data)['products']
             for product in products:
-                matorral = mapas.HeightMap( product['nombre'], 'matorral', product['long'], product['lat'] )
-                arbolado = mapas.HeightMap( product['nombre'], 'arbolado', product['long'], product['lat'] )
-                matorral.create()
-                arbolado.create()
-                fm = mapas.FuelMap( product['long'], product['lat'] )
-                fm.calculate()
-                fm.create_image()
+                fm = mapas.FuelMap( product['nombre'] )
+                fm.createHeightMap('matorral')
+                fm.createHeightMap('arbolado')
+                fm.createFuelMap()

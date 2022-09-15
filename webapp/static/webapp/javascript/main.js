@@ -46,14 +46,31 @@ class Lidar {
     this.numItems = document.getElementById('numItems');
     this.noProducts = document.getElementById('noProducts');
     this.download = document.getElementById('download');
+    this.progress = document.getElementById('progress');
+    this.progressBar = document.getElementById('progressBar');
+    this.progressBarFile = document.getElementById('progressBarFile');
+    this.mb = document.getElementById('mb');
+    this.perc = 0;
+    this.fileDownloaded = 0;
+    this.totalFiles = 1;
+
+    this.fmButton = document.getElementById('fmButton');
+    this.visorButton = document.getElementById('visorButton');
+    this.downloadedModal = new bootstrap.Modal( document.getElementById('downloadedModal'), {backdrop: false} );
 
     this.download.addEventListener('click', () => {
+      this.progress.classList.remove('hidden');
       socket.send(JSON.stringify({
         'type': 'download',
         'products': this.items
       }));
 
-    })
+    });
+
+    this.fmButton.addEventListener('click', () => {
+      console.log('fm');
+      socket.send(this.fmData);
+    });
 
     socket.onmessage = (e) => {
       this.data = JSON.parse(e.data);
@@ -75,12 +92,28 @@ class Lidar {
           this.numItems.innerHTML = this.items.length;
         }
         this.modal.show();
+      } else if (this.data.type == 'chunk') {
+        this.mb.innerHTML = this.data.chunk / 1000.;
+        let filePerc = parseInt(this.data.chunk) / (parseInt(this.data.tam * 1000)) * 100;
+        console.log( this.data.chunk );
+        console.log( parseInt(this.data.tam * 1000) );
+        let totalPerc = parseInt(this.fileDownloaded) * 100 / parseInt(this.totalFiles);
+        let finalPerc = totalPerc + (this.data.chunk / 10) / (this.data.tam * this.data.numFiles); 
+        this.progressBarFile.style.width = `${filePerc}%`;
+        this.progressBar.style.width = `${finalPerc}%`;
+      } else if (this.data.type == 'file_downloaded') {
+        this.fileDownloaded = this.data.file_number;
+        this.totalFiles = this.data.total_files;
+        this.perc = parseInt(this.data.file_number) * 100 / parseInt(this.data.total_files);
+        this.progressBar.style.width = `${this.perc}%`;
+        
       } else if (this.data.type == 'downloaded') {
-        console.log( this.data );
-        socket.send(JSON.stringify({
+        this.fmData = JSON.stringify({
           'type': 'fuelmap',
           'products': this.data.products
-        }));
+        });
+        this.downloadedModal.show();
+      
       }
     }
 
@@ -160,7 +193,15 @@ class Lidar {
 
   mostrarLAZ() {
     this.items.forEach( elem => {
-      let polygon = L.polygon( elem.coords, {color: 'red'} ).addTo(layerGroup);
+      let color = '';
+      if ( elem.descargado ) {
+        color = 'green';
+
+      } else {
+        color = 'red';
+      }
+
+      let polygon = L.polygon( elem.coords, {color: color} ).addTo(layerGroup);
     });
   }
 }

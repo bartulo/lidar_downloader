@@ -18,6 +18,7 @@ class Lida2(models.Model):
     color = models.CharField(max_length=256, blank=True, null=True)
     orig_srid = models.CharField(max_length=256, blank=True, null=True)
     geom = models.PolygonField(srid=25830, blank=True, null=True)
+    tam = models.FloatField(blank=True, null=True)
 
     class Meta:
         db_table = 'lida2'
