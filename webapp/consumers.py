@@ -90,4 +90,5 @@ class AppConsumer(WebsocketConsumer):
                 fm = mapas.FuelMap( product['nombre'] )
                 fm.createHeightMap('matorral')
                 fm.createHeightMap('arbolado')
+                fm.createHeightMap('edificaciones')
                 fm.createFuelMap()
